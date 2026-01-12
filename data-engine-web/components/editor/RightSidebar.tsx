@@ -1,22 +1,47 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useEditor } from '@/hooks/useEditor';
+import { updateProjectDetails } from '@/lib/api/files';
 
 export function RightSidebar() {
-  const { selectedFile } = useEditor();
+  const { selectedFile, projectDetails, refreshProjectDetails } = useEditor();
   const [activeTab, setActiveTab] = useState<'outline' | 'documentation'>('outline');
   const [requester, setRequester] = useState('');
   const [requirement, setRequirement] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSearchCase = () => {
-    // TODO: 实现案例搜索功能
-    console.log('搜索案例');
-  };
+  // 当项目详情或选中文件改变时，更新表单
+  useEffect(() => {
+    if (projectDetails) {
+      setRequester(projectDetails.requester || '');
+      setRequirement(projectDetails.requirementDescription || '');
+    } else {
+      setRequester('');
+      setRequirement('');
+    }
+  }, [projectDetails, selectedFile]);
 
-  const handleAIPrompt = () => {
-    // TODO: 实现 AI 提示功能
-    console.log('AI 提示:', { requester, requirement });
+  const handleSubmit = async () => {
+    if (!selectedFile) {
+      alert('请先选择一个项目');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await updateProjectDetails(selectedFile, {
+        requester: requester.trim(),
+        requirementDescription: requirement.trim(),
+      });
+      await refreshProjectDetails();
+      alert('保存成功');
+    } catch (error) {
+      console.error('Failed to save project details:', error);
+      alert('保存失败：' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -49,6 +74,20 @@ export function RightSidebar() {
       <div className="flex-1 overflow-y-auto p-4">
         {activeTab === 'outline' && (
           <div className="space-y-4">
+            {/* 需求名称显示（只读，项目名称） */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                需求名称
+              </label>
+              <input
+                type="text"
+                value={projectDetails?.requirementName || '未设置'}
+                readOnly
+                className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
+                placeholder="需求名称（项目名称）"
+              />
+            </div>
+
             {/* 需求方输入框 */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -77,12 +116,12 @@ export function RightSidebar() {
               />
             </div>
 
-            {/* 按钮组 - 一行显示 */}
-            <div className="flex items-center gap-2">
-              {/* 案例搜索按钮 */}
+            {/* 提交按钮 */}
+            <div>
               <button
-                onClick={handleSearchCase}
-                className="flex-1 px-4 py-2 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
+                onClick={handleSubmit}
+                disabled={isSaving || !selectedFile}
+                className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
               >
                 <svg
                   className="w-4 h-4"
@@ -94,31 +133,10 @@ export function RightSidebar() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
-                案例搜索
-              </button>
-
-              {/* AI提示按钮 */}
-              <button
-                onClick={handleAIPrompt}
-                className="flex-1 px-4 py-2 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                  />
-                </svg>
-                AI 提示
+                {isSaving ? '保存中...' : '提交'}
               </button>
             </div>
           </div>

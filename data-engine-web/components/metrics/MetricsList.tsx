@@ -113,7 +113,7 @@ export function MetricsList({
                       />
                     </svg>
                     <span className="text-sm font-medium text-gray-200">{category.name}</span>
-                    <span className="text-xs text-gray-500">({category.metrics.length})</span>
+                    <span className="text-xs text-gray-500">({category.metrics?.length || 0})</span>
                   </div>
                   <button
                     className="text-gray-400 hover:text-gray-300 p-1"
@@ -136,7 +136,7 @@ export function MetricsList({
                 {/* 指标列表 */}
                 {expandedCategories.has(category.id) && (
                   <div className="border-t border-gray-700">
-                    {category.metrics.map((metric) => (
+                    {(category.metrics || []).map((metric) => (
                       <div
                         key={metric.id}
                         onClick={() => onMetricClick?.(metric)}

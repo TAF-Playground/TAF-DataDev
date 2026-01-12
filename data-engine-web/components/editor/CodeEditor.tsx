@@ -1,15 +1,42 @@
 'use client';
 
 import { useEditor } from '@/hooks/useEditor';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { format } from 'sql-formatter';
+import { saveProjectSQL, getFileItem } from '@/lib/api/files';
+import { DEFAULT_FILE_PATH } from '@/constants';
 
 export function CodeEditor() {
   const { codeContent, selectedFile, setCodeContent } = useEditor();
   const [isRunning, setIsRunning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [projectName, setProjectName] = useState<string>('');
+
+  useEffect(() => {
+    const loadProjectName = async () => {
+      if (!selectedFile || selectedFile === DEFAULT_FILE_PATH) {
+        setProjectName('');
+        return;
+      }
+
+      try {
+        const item = await getFileItem(selectedFile);
+        if (item) {
+          setProjectName(item.name);
+        } else {
+          setProjectName('');
+        }
+      } catch (error) {
+        console.error('Failed to load project name:', error);
+        setProjectName('');
+      }
+    };
+
+    loadProjectName();
+  }, [selectedFile]);
 
   const handleEditorChange = (value: string) => {
     setCodeContent(value);
@@ -46,9 +73,22 @@ export function CodeEditor() {
     }
   };
 
-  const handleSave = () => {
-    // TODO: 实现保存逻辑
-    console.log('保存 SQL:', codeContent);
+  const handleSave = async () => {
+    if (!selectedFile || selectedFile === DEFAULT_FILE_PATH) {
+      alert('请先选择一个项目');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await saveProjectSQL(selectedFile, codeContent);
+      alert('SQL保存成功');
+    } catch (error) {
+      console.error('Failed to save SQL:', error);
+      alert('保存失败：' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -56,9 +96,9 @@ export function CodeEditor() {
       {/* File path bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700 bg-gray-850">
         <div className="flex items-center gap-2 text-sm text-gray-400">
-          <span>definitions</span>
+          <span>项目</span>
           <span>/</span>
-          <span>{selectedFile ? selectedFile.replace('models/', '') : '1_simple_examples/dataset_2_with_ref.sql'}</span>
+          <span>{projectName || '未选择项目'}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* 美化按钮 */}
@@ -112,7 +152,8 @@ export function CodeEditor() {
           {/* Save 按钮 */}
           <button
             onClick={handleSave}
-            className="px-3 py-1 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded flex items-center gap-2"
+            disabled={isSaving || !selectedFile || selectedFile === DEFAULT_FILE_PATH}
+            className="px-3 py-1 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <svg
               className="w-4 h-4"
@@ -127,7 +168,7 @@ export function CodeEditor() {
                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"
               />
             </svg>
-            保存
+            {isSaving ? '保存中...' : '保存'}
           </button>
         </div>
       </div>

@@ -16,7 +16,7 @@ interface MetricsContextType {
   categories: MetricCategory[];
   loading: boolean;
   refreshCategories: () => Promise<void>;
-  createCategory: (name: string) => Promise<void>;
+  createCategory: (name: string) => Promise<MetricCategory>;
   createMetric: (categoryId: string, metric: { name: string; description: string }) => Promise<void>;
   updateCategoryName: (categoryId: string, name: string) => Promise<void>;
   updateMetricName: (categoryId: string, metricId: string, name: string) => Promise<void>;

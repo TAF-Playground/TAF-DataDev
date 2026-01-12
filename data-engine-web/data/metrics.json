@@ -1,0 +1,41 @@
+{
+  "categories": [
+    {
+      "id": "cat_1",
+      "name": "用户指标",
+      "createdAt": "2024-01-15T10:00:00Z",
+      "updatedAt": "2024-01-15T10:00:00Z",
+      "metrics": [
+        {
+          "id": "metric_1",
+          "name": "日活跃用户数",
+          "description": "统计每日活跃用户数量",
+          "status": "active",
+          "updatedAt": "2024-01-15"
+        }
+      ]
+    },
+    {
+      "id": "cat_2",
+      "name": "业务指标",
+      "createdAt": "2024-01-14T10:00:00Z",
+      "updatedAt": "2024-01-14T10:00:00Z",
+      "metrics": [
+        {
+          "id": "metric_2",
+          "name": "订单转化率",
+          "description": "计算订单转化率",
+          "status": "active",
+          "updatedAt": "2024-01-14"
+        },
+        {
+          "id": "metric_3",
+          "name": "GMV",
+          "description": "总交易额",
+          "status": "draft",
+          "updatedAt": "2024-01-13"
+        }
+      ]
+    }
+  ]
+}

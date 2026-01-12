@@ -358,3 +358,375 @@ def create_project():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+
+@editor_bp.route('/directories/<directory_id>', methods=['PUT', 'PATCH'])
+def update_directory(directory_id):
+    """
+    Update directory name
+    ---
+    tags:
+      - Editor
+    summary: Update directory name
+    description: Updates the name of an existing directory
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: directory_id
+        type: string
+        required: true
+        description: Directory ID
+      - in: body
+        name: body
+        description: Directory update information
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: New directory name
+              example: "更新后的目录名称"
+    responses:
+      200:
+        description: Directory updated successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            type:
+              type: string
+            parentId:
+              type: string
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+      400:
+        description: Bad request - name is required
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Directory not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'name' not in data:
+            return jsonify({'error': '目录名称不能为空'}), 400
+        
+        name = data.get('name', '').strip()
+        if not name:
+            return jsonify({'error': '目录名称不能为空'}), 400
+        
+        directory = Directory.query.get(directory_id)
+        if not directory:
+            return jsonify({'error': '目录不存在'}), 404
+        
+        directory.name = name
+        db.session.commit()
+        
+        return jsonify(directory.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@editor_bp.route('/projects/<project_id>', methods=['PUT', 'PATCH'])
+def update_project(project_id):
+    """
+    Update project name
+    ---
+    tags:
+      - Editor
+    summary: Update project name
+    description: Updates the name of an existing project and requirement name
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: project_id
+        type: string
+        required: true
+        description: Project ID
+      - in: body
+        name: body
+        description: Project update information
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+          properties:
+            name:
+              type: string
+              description: New project name
+              example: "更新后的项目名称"
+    responses:
+      200:
+        description: Project updated successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            type:
+              type: string
+            parentId:
+              type: string
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+            projectDetails:
+              type: object
+      400:
+        description: Bad request - name is required
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      404:
+        description: Project not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'name' not in data:
+            return jsonify({'error': '项目名称不能为空'}), 400
+        
+        name = data.get('name', '').strip()
+        if not name:
+            return jsonify({'error': '项目名称不能为空'}), 400
+        
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'error': '项目不存在'}), 404
+        
+        project.name = name
+        # 同时更新需求名称
+        project.requirement_name = name
+        db.session.commit()
+        
+        return jsonify(project.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@editor_bp.route('/projects/<project_id>/details', methods=['PUT', 'PATCH'])
+def update_project_details(project_id):
+    """
+    Update project details
+    ---
+    tags:
+      - Editor
+    summary: Update project details
+    description: Updates project details including requirement description, requester, and SQL content
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: project_id
+        type: string
+        required: true
+        description: Project ID
+      - in: body
+        name: body
+        description: Project details to update
+        required: true
+        schema:
+          type: object
+          properties:
+            requirementName:
+              type: string
+              description: Requirement name
+            requirementDescription:
+              type: string
+              description: Requirement description
+            requester:
+              type: string
+              description: Requester name
+            sql:
+              type: string
+              description: SQL content
+    responses:
+      200:
+        description: Project details updated successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            projectDetails:
+              type: object
+      404:
+        description: Project not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    try:
+        data = request.get_json() or {}
+        
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'error': '项目不存在'}), 404
+        
+        # 更新项目详情
+        if 'requirementName' in data:
+            project.requirement_name = data['requirementName']
+        if 'requirementDescription' in data:
+            project.requirement_description = data.get('requirementDescription')
+        if 'requester' in data:
+            project.requester = data.get('requester')
+        if 'sql' in data:
+            project.sql_content = data.get('sql')
+        
+        db.session.commit()
+        
+        return jsonify(project.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@editor_bp.route('/projects/<project_id>/move', methods=['PUT', 'PATCH'])
+def move_project(project_id):
+    """
+    Move project to different directory
+    ---
+    tags:
+      - Editor
+    summary: Move project to different directory
+    description: Moves a project to a different directory or root
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: path
+        name: project_id
+        type: string
+        required: true
+        description: Project ID
+      - in: body
+        name: body
+        description: Target directory information
+        required: false
+        schema:
+          type: object
+          properties:
+            targetParentId:
+              type: string
+              description: Target directory ID (null for root)
+              nullable: true
+    responses:
+      200:
+        description: Project moved successfully
+        schema:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            parentId:
+              type: string
+              nullable: true
+      404:
+        description: Project or target directory not found
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      500:
+        description: Server error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    try:
+        data = request.get_json() or {}
+        target_parent_id = data.get('targetParentId')
+        
+        project = Project.query.get(project_id)
+        if not project:
+            return jsonify({'error': '项目不存在'}), 404
+        
+        # Validate target directory if provided
+        if target_parent_id:
+            target_parent = Directory.query.get(target_parent_id)
+            if not target_parent:
+                return jsonify({'error': '目标目录不存在'}), 404
+        
+        # Update project's directory
+        project.directory_id = target_parent_id
+        db.session.commit()
+        
+        return jsonify(project.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+

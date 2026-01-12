@@ -107,37 +107,58 @@ export function createFile(name: string, parentId?: string): Promise<FileItem> {
 
 // 更新文件/目录名称
 export function updateItemName(itemId: string, name: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (!name || name.trim() === '') {
-      reject(new Error('名称不能为空'));
-      return;
-    }
+  if (!name || name.trim() === '') {
+    return Promise.reject(new Error('名称不能为空'));
+  }
 
-    if (typeof window === 'undefined') {
-      reject(new Error('此功能仅在客户端可用'));
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const item = findItemById(data, itemId);
-    if (item) {
-      item.name = name.trim();
-      // 如果是项目文件，同时更新需求名称
-      if (item.type === 'file') {
-        if (!item.projectDetails) {
-          item.projectDetails = {};
-        }
-        item.projectDetails.requirementName = name.trim();
+  // 先获取文件列表，判断是目录还是项目
+  return getFiles()
+    .then(files => {
+      const item = findItemById(files, itemId);
+      if (!item) {
+        throw new Error('项目不存在');
       }
-      item.updatedAt = new Date().toISOString();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      resolve();
-    } else {
-      reject(new Error('项目不存在'));
-    }
-  });
+
+      const trimmedName = name.trim();
+      
+      // 根据类型调用不同的API
+      if (item.type === 'directory') {
+        return fetch(`${API_BASE_URL}/editor/directories/${itemId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: trimmedName,
+          }),
+        });
+      } else {
+        return fetch(`${API_BASE_URL}/editor/projects/${itemId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: trimmedName,
+          }),
+        });
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(() => {
+      // 更新成功，不需要返回值
+    })
+    .catch(error => {
+      console.error('Failed to update item name:', error);
+      throw error;
+    });
 }
 
 // 删除文件/目录
@@ -197,49 +218,28 @@ export function updateProjectDetails(
   projectId: string,
   details: Partial<ProjectDetails>
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('此功能仅在客户端可用'));
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const item = findItemById(data, projectId);
-    if (!item) {
-      reject(new Error('项目不存在'));
-      return;
-    }
-
-    if (item.type !== 'file') {
-      reject(new Error('只能更新项目的详情'));
-      return;
-    }
-
-    // 初始化projectDetails对象
-    if (!item.projectDetails) {
-      item.projectDetails = {};
-    }
-
-    // 更新详情
-    if (details.requirementName !== undefined) {
-      item.projectDetails.requirementName = details.requirementName;
-    }
-    if (details.requirementDescription !== undefined) {
-      item.projectDetails.requirementDescription = details.requirementDescription;
-    }
-    if (details.requester !== undefined) {
-      item.projectDetails.requester = details.requester;
-    }
-    if (details.sql !== undefined) {
-      item.projectDetails.sql = details.sql;
-    }
-
-    item.updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    resolve();
-  });
+  return fetch(`${API_BASE_URL}/editor/projects/${projectId}/details`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(details),
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(() => {
+      // 更新成功，不需要返回值
+    })
+    .catch(error => {
+      console.error('Failed to update project details:', error);
+      throw error;
+    });
 }
 
 // 保存SQL内容
@@ -249,205 +249,130 @@ export function saveProjectSQL(projectId: string, sql: string): Promise<void> {
 
 // 移动项目到不同目录
 export function moveProject(projectId: string, targetParentId?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('此功能仅在客户端可用'));
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    // 查找要移动的项目
-    const project = findItemById(data, projectId);
-    if (!project) {
-      reject(new Error('项目不存在'));
-      return;
-    }
-
-    if (project.type !== 'file') {
-      reject(new Error('只能移动项目文件'));
-      return;
-    }
-
-    // 验证目标目录（如果提供了）
-    if (targetParentId) {
-      const targetParent = findItemById(data, targetParentId);
-      if (!targetParent || targetParent.type !== 'directory') {
-        reject(new Error('目标目录不存在'));
-        return;
+  return fetch(`${API_BASE_URL}/editor/projects/${projectId}/move`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      targetParentId: targetParentId || null,
+    }),
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
       }
-    }
-
-    // 从原位置移除项目
-    const removeFromParent = (items: FileItem[], id: string, parentId?: string): boolean => {
-      if (parentId) {
-        const parent = findItemById(items, parentId);
-        if (parent && parent.children) {
-          const index = parent.children.findIndex(item => item.id === id);
-          if (index !== -1) {
-            parent.children.splice(index, 1);
-            parent.updatedAt = new Date().toISOString();
-            return true;
-          }
-        }
-      } else {
-        const index = items.findIndex(item => item.id === id);
-        if (index !== -1) {
-          items.splice(index, 1);
-          return true;
-        }
-      }
-      return false;
-    };
-
-    // 从原位置移除
-    if (!removeFromParent(data, projectId, project.parentId)) {
-      reject(new Error('无法从原位置移除项目'));
-      return;
-    }
-
-    // 更新项目的parentId
-    project.parentId = targetParentId;
-    project.updatedAt = new Date().toISOString();
-
-    // 添加到新位置
-    if (targetParentId) {
-      const targetParent = findItemById(data, targetParentId);
-      if (targetParent && targetParent.type === 'directory') {
-        if (!targetParent.children) {
-          targetParent.children = [];
-        }
-        targetParent.children.push(project);
-        targetParent.updatedAt = new Date().toISOString();
-      }
-    } else {
-      // 添加到根目录
-      data.push(project);
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    resolve();
-  });
+      return response.json();
+    })
+    .then(() => {
+      // 移动成功，不需要返回值
+    })
+    .catch(error => {
+      console.error('Failed to move project:', error);
+      throw error;
+    });
 }
 
 // 获取项目详情
 export function getProjectDetails(projectId: string): Promise<ProjectDetails | null> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      resolve(null);
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const item = findItemById(data, projectId);
-    if (!item || item.type !== 'file') {
-      resolve(null);
-      return;
-    }
-
-    resolve(item.projectDetails || {});
-  });
+  return getFiles()
+    .then(files => {
+      const item = findItemById(files, projectId);
+      if (!item || item.type !== 'file') {
+        return null;
+      }
+      return item.projectDetails || {};
+    })
+    .catch(error => {
+      console.error('Failed to get project details:', error);
+      return null;
+    });
 }
 
 // 获取所有项目（递归查找所有文件）
 export function getAllProjects(): Promise<FileItem[]> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined') {
-      resolve([]);
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const projects: FileItem[] = [];
-    
-    const collectProjects = (items: FileItem[]) => {
-      for (const item of items) {
-        if (item.type === 'file') {
-          projects.push(item);
+  return getFiles()
+    .then(files => {
+      const projects: FileItem[] = [];
+      
+      const collectProjects = (items: FileItem[]) => {
+        for (const item of items) {
+          if (item.type === 'file') {
+            projects.push(item);
+          }
+          if (item.children) {
+            collectProjects(item.children);
+          }
         }
-        if (item.children) {
-          collectProjects(item.children);
-        }
-      }
-    };
+      };
 
-    collectProjects(data);
-    resolve(projects);
-  });
+      collectProjects(files);
+      return projects;
+    })
+    .catch(error => {
+      console.error('Failed to get all projects:', error);
+      return [];
+    });
 }
 
 // 获取目录下的所有项目
 export function getDirectoryProjects(directoryId: string): Promise<FileItem[]> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      resolve([]);
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const directory = findItemById(data, directoryId);
-    if (!directory || directory.type !== 'directory') {
-      reject(new Error('目录不存在'));
-      return;
-    }
-
-    const projects: FileItem[] = [];
-    
-    const collectProjects = (items: FileItem[]) => {
-      for (const item of items) {
-        if (item.type === 'file') {
-          projects.push(item);
-        }
-        if (item.children) {
-          collectProjects(item.children);
-        }
+  return getFiles()
+    .then(files => {
+      const directory = findItemById(files, directoryId);
+      if (!directory || directory.type !== 'directory') {
+        throw new Error('目录不存在');
       }
-    };
 
-    collectProjects(directory.children || []);
-    resolve(projects);
-  });
+      const projects: FileItem[] = [];
+      
+      const collectProjects = (items: FileItem[]) => {
+        for (const item of items) {
+          if (item.type === 'file') {
+            projects.push(item);
+          }
+          if (item.children) {
+            collectProjects(item.children);
+          }
+        }
+      };
+
+      collectProjects(directory.children || []);
+      return projects;
+    })
+    .catch(error => {
+      console.error('Failed to get directory projects:', error);
+      throw error;
+    });
 }
 
 // 获取目录信息
 export function getDirectory(directoryId: string): Promise<FileItem | null> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined') {
-      resolve(null);
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const directory = findItemById(data, directoryId);
-    if (directory && directory.type === 'directory') {
-      resolve(directory);
-    } else {
-      resolve(null);
-    }
-  });
+  return getFiles()
+    .then(files => {
+      const directory = findItemById(files, directoryId);
+      if (directory && directory.type === 'directory') {
+        return directory;
+      }
+      return null;
+    })
+    .catch(error => {
+      console.error('Failed to get directory:', error);
+      return null;
+    });
 }
 
 // 根据ID获取文件项
 export function getFileItem(itemId: string): Promise<FileItem | null> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined') {
-      resolve(null);
-      return;
-    }
-
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : initialData;
-
-    const item = findItemById(data, itemId);
-    resolve(item || null);
-  });
+  return getFiles()
+    .then(files => {
+      const item = findItemById(files, itemId);
+      return item || null;
+    })
+    .catch(error => {
+      console.error('Failed to get file item:', error);
+      return null;
+    });
 }

@@ -8,7 +8,9 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # Import blueprints to register routes
 from . import editor
+from . import database
 
 # Register blueprints
 api_bp.register_blueprint(editor.editor_bp)
+api_bp.register_blueprint(database.database_bp)
 

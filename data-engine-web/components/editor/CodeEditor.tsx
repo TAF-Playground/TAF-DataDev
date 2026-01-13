@@ -1,16 +1,21 @@
 'use client';
 
 import { useEditor } from '@/hooks/useEditor';
+import { useDatabase } from '@/contexts/DatabaseContext';
+import { useQueryResult } from '@/contexts/QueryResultContext';
 import { useState, useEffect } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { format } from 'sql-formatter';
 import { saveProjectSQL, getFileItem } from '@/lib/api/files';
+import { executeSQL } from '@/lib/api/database';
 import { DEFAULT_FILE_PATH } from '@/constants';
 
 export function CodeEditor() {
   const { codeContent, selectedFile, setCodeContent } = useEditor();
+  const { selectedDatabase } = useDatabase();
+  const { setQueryResult } = useQueryResult();
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectName, setProjectName] = useState<string>('');
@@ -42,14 +47,34 @@ export function CodeEditor() {
     setCodeContent(value);
   };
 
-  const handleRun = () => {
-    setIsRunning(true);
-    // TODO: 实现 SQL 运行逻辑
-    console.log('运行 SQL:', codeContent);
-    // 模拟运行
-    setTimeout(() => {
+  const handleRun = async () => {
+    if (!selectedDatabase) {
+      alert('请先在右侧面板选择数据库');
+      return;
+    }
+
+    if (!codeContent.trim()) {
+      alert('SQL 查询不能为空');
+      return;
+    }
+
+    try {
+      setIsRunning(true);
+      const result = await executeSQL(selectedDatabase.id, codeContent);
+      setQueryResult(result);
+      
+      // 自动切换到 Query results tab (通过设置 activeTab)
+      // 这个需要在 BottomPanel 中处理
+    } catch (error) {
+      console.error('Failed to execute SQL:', error);
+      setQueryResult({
+        success: false,
+        error: error instanceof Error ? error.message : '执行失败',
+        message: error instanceof Error ? error.message : '执行失败'
+      });
+    } finally {
       setIsRunning(false);
-    }, 1000);
+    }
   };
 
   const handleFormat = () => {

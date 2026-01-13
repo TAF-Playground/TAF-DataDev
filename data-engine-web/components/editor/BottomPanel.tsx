@@ -1,10 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryResult } from '@/contexts/QueryResultContext';
 import { SchemaData, SchemaField } from '@/types';
 
 export function BottomPanel() {
+  const { queryResult } = useQueryResult();
   const [activeTab, setActiveTab] = useState<'query-results' | 'schemas' | 'case-search' | 'ai-prompt'>('schemas');
+
+  // 当有查询结果时，自动切换到 Query results tab
+  useEffect(() => {
+    if (queryResult) {
+      setActiveTab('query-results');
+    }
+  }, [queryResult]);
   const [expandedSchemas, setExpandedSchemas] = useState<Set<string>>(
     new Set(['datafrom_demo'])
   );
@@ -96,8 +105,101 @@ export function BottomPanel() {
       {/* Content */}
       <div className="flex-1 overflow-hidden flex">
         {activeTab === 'query-results' && (
-          <div className="flex-1 p-4 text-sm text-gray-400">
-            Query results will appear here...
+          <div className="flex-1 overflow-auto p-4">
+            {!queryResult ? (
+              <div className="text-sm text-gray-400">
+                <p>查询结果将显示在这里...</p>
+                <p className="text-xs mt-2">请在 SQL 编辑器中编写 SQL 并点击运行按钮</p>
+              </div>
+            ) : queryResult.success ? (
+              <div className="space-y-4">
+                {/* 查询信息 */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-4">
+                    <span className="text-green-400">
+                      ✓ {queryResult.message || '查询成功'}
+                    </span>
+                    {queryResult.rowCount !== undefined && (
+                      <span className="text-gray-400">
+                        返回 {queryResult.rowCount} 行
+                      </span>
+                    )}
+                    {queryResult.executionTime !== undefined && (
+                      <span className="text-gray-400">
+                        执行时间: {queryResult.executionTime} 秒
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 查询结果表格 */}
+                {queryResult.columns && queryResult.columns.length > 0 && queryResult.rows ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-600 bg-gray-700">
+                          {queryResult.columns.map((col, index) => (
+                            <th
+                              key={index}
+                              className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700"
+                            >
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {queryResult.rows.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={queryResult.columns.length}
+                              className="py-8 text-center text-gray-400"
+                            >
+                              没有数据
+                            </td>
+                          </tr>
+                        ) : (
+                          queryResult.rows.map((row, rowIndex) => (
+                            <tr
+                              key={rowIndex}
+                              className="border-b border-gray-700 hover:bg-gray-750"
+                            >
+                              {row.map((cell, cellIndex) => (
+                                <td
+                                  key={cellIndex}
+                                  className="py-2 px-3 text-gray-300"
+                                >
+                                  {cell === null || cell === undefined ? (
+                                    <span className="text-gray-500 italic">NULL</span>
+                                  ) : (
+                                    String(cell)
+                                  )}
+                                </td>
+                              ))}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-400">
+                    {queryResult.message || '执行成功，但没有返回数据'}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm">
+                <div className="p-3 bg-red-900 bg-opacity-50 border border-red-700 text-red-200 rounded">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>{queryResult.error || queryResult.message || '执行失败'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

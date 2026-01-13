@@ -2,14 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import { useEditor } from '@/hooks/useEditor';
+import { useDatabase } from '@/contexts/DatabaseContext';
 import { updateProjectDetails } from '@/lib/api/files';
+import { getDatabaseConnections, type DatabaseConnection } from '@/lib/api/database';
 
 export function RightSidebar() {
   const { selectedFile, projectDetails, refreshProjectDetails } = useEditor();
-  const [activeTab, setActiveTab] = useState<'outline' | 'documentation'>('outline');
+  const { selectedDatabase, setSelectedDatabase } = useDatabase();
+  const [activeTab, setActiveTab] = useState<'outline' | 'database'>('outline');
+  const [databases, setDatabases] = useState<DatabaseConnection[]>([]);
+  const [loadingDatabases, setLoadingDatabases] = useState(false);
   const [requester, setRequester] = useState('');
   const [requirement, setRequirement] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // 加载数据库列表
+  useEffect(() => {
+    const loadDatabases = async () => {
+      try {
+        setLoadingDatabases(true);
+        const data = await getDatabaseConnections();
+        setDatabases(data);
+      } catch (error) {
+        console.error('Failed to load databases:', error);
+      } finally {
+        setLoadingDatabases(false);
+      }
+    };
+    loadDatabases();
+  }, []);
 
   // 当项目详情或选中文件改变时，更新表单
   useEffect(() => {
@@ -59,14 +80,14 @@ export function RightSidebar() {
           Outline
         </button>
         <button
-          onClick={() => setActiveTab('documentation')}
+          onClick={() => setActiveTab('database')}
           className={`flex-1 px-4 py-2 text-sm font-medium ${
-            activeTab === 'documentation'
+            activeTab === 'database'
               ? 'text-white border-b-2 border-blue-500'
               : 'text-gray-400 hover:text-gray-300'
           }`}
         >
-          Documentation
+          数据库
         </button>
       </div>
 
@@ -142,9 +163,55 @@ export function RightSidebar() {
           </div>
         )}
 
-        {activeTab === 'documentation' && (
-          <div className="text-sm text-gray-400">
-            <p>Documentation content goes here...</p>
+        {activeTab === 'database' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                选择数据库
+              </label>
+              {loadingDatabases ? (
+                <div className="text-sm text-gray-400">加载中...</div>
+              ) : databases.length === 0 ? (
+                <div className="text-sm text-gray-400">
+                  <p>还没有数据库连接</p>
+                  <p className="text-xs mt-1">请前往数据库页面添加连接</p>
+                </div>
+              ) : (
+                <select
+                  value={selectedDatabase?.id || ''}
+                  onChange={(e) => {
+                    const db = databases.find(d => d.id === e.target.value);
+                    setSelectedDatabase(db || null);
+                  }}
+                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">-- 请选择数据库 --</option>
+                  {databases.map((db) => (
+                    <option key={db.id} value={db.id}>
+                      {db.name} ({db.dbType.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {selectedDatabase && (
+              <div className="p-3 bg-gray-700 rounded border border-gray-600">
+                <div className="text-sm text-gray-300 mb-2">
+                  <div className="font-medium">{selectedDatabase.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {selectedDatabase.dbType.toUpperCase()}
+                    {selectedDatabase.host && ` • ${selectedDatabase.host}`}
+                    {selectedDatabase.database && ` • ${selectedDatabase.database}`}
+                  </div>
+                </div>
+                {selectedDatabase.description && (
+                  <div className="text-xs text-gray-400 mt-2">
+                    {selectedDatabase.description}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

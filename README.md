@@ -1,15 +1,16 @@
 <div align="right">
 
-[English](README_EN.md) | [中文](README.md)
+[English](README.md) | [中文](README_ZH.md)
 
 </div>
 
-# TAF-DataDev - 企业级 SQL 开发编辑器
+# TAF-DataDev - Enterprise SQL Development Editor
 
 <div align="center">
 
+![TAF-DataDev](pic/功能截图.png)
 
-**专为数据工程师打造的现代化 SQL 开发环境**
+**A Modern SQL Development Environment Built for Data Engineers**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/)
@@ -18,115 +19,115 @@
 
 </div>
 
-## 📖 项目简介
+## 📖 Project Overview
 
-TAF-DataDev 是一个专为 SQL 开发设计的企业级开发环境，集成了数据库连接管理、SQL 编辑、查询执行、表结构查看、指标管理等核心功能。与通用代码编辑器（如 Cursor、VS Code）不同，TAF-DataDev 专注于数据开发场景，提供了开箱即用的数据库操作能力和智能化的 SQL 开发体验。
+TAF-DataDev is an enterprise-grade development environment specifically designed for SQL development. It integrates core functionalities including database connection management, SQL editing, query execution, table structure viewing, and metrics management. Unlike general-purpose code editors (such as Cursor, VS Code), TAF-DataDev focuses on data development scenarios, providing out-of-the-box database operation capabilities and intelligent SQL development experience.
 
-## ✨ 核心特性
+## ✨ Core Features
 
-### 🎯 专为 SQL 开发优化
+### 🎯 SQL Development Optimized
 
-- **智能 SQL 编辑器**：基于 CodeMirror 6，提供语法高亮、自动补全、代码格式化
-- **多数据库支持**：支持 MySQL、PostgreSQL、SQLite 等多种数据库
-- **实时查询执行**：一键执行 SQL，即时查看结果
-- **表结构查看**：可视化查看数据库表结构，包括字段、类型、约束等信息
-- **临时表创建**：支持从 Excel、JSON、CSV 文件快速创建临时表
+- **Intelligent SQL Editor**: Based on CodeMirror 6, providing syntax highlighting, auto-completion, and code formatting
+- **Multi-Database Support**: Supports MySQL, PostgreSQL, SQLite, and more
+- **Real-time Query Execution**: Execute SQL with one click and view results instantly
+- **Table Structure Viewing**: Visually view database table structures, including fields, types, constraints, and more
+- **Temporary Table Creation**: Quickly create temporary tables from Excel, JSON, CSV files
 
-### 🚀 企业级功能
+### 🚀 Enterprise Features
 
-- **项目管理系统**：支持目录结构管理，项目需求录入和追踪
-- **指标库管理**：集中管理业务指标，支持指标分类和搜索
-- **案例搜索**：快速搜索历史 SQL 案例和解决方案
-- **AI 智能助手**：
-  - **AI 方案生成**：根据需求自动生成 SQL 解决方案
-  - **AI 指标提取**：从 SQL 语句中智能提取业务指标
+- **Project Management System**: Supports directory structure management, project requirement entry and tracking
+- **Metrics Library Management**: Centralized management of business metrics with classification and search support
+- **Case Search**: Quickly search historical SQL cases and solutions
+- **AI Intelligent Assistant**:
+  - **AI Solution Generation**: Automatically generate SQL solutions based on requirements
+  - **AI Metric Extraction**: Intelligently extract business metrics from SQL statements
 
-### 🎨 现代化 UI
+### 🎨 Modern UI
 
-- **可调整面板布局**：支持拖拽调整面板大小，灵活的工作区配置
-- **暗色主题**：护眼的暗色主题，适合长时间开发
-- **响应式设计**：适配不同屏幕尺寸
+- **Adjustable Panel Layout**: Support drag-and-drop panel resizing with flexible workspace configuration
+- **Dark Theme**: Eye-friendly dark theme, suitable for long-term development
+- **Responsive Design**: Adapts to different screen sizes
 
-## 🆚 与主流编辑器的对比
+## 🆚 Comparison with Mainstream Editors
 
-| 特性 | TAF-DataDev | Cursor | VS Code | DataGrip |
-|------|-------------|--------|---------|----------|
-| **SQL 专用优化** | ✅ 专为 SQL 设计 | ❌ 通用编辑器 | ❌ 通用编辑器 | ✅ 数据库 IDE |
-| **数据库连接管理** | ✅ 内置支持 | ❌ 需插件 | ❌ 需插件 | ✅ 内置支持 |
-| **表结构可视化** | ✅ 一键查看 | ❌ 需插件 | ❌ 需插件 | ✅ 支持 |
-| **临时表创建** | ✅ 文件上传 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
-| **指标库管理** | ✅ 内置功能 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
-| **AI SQL 生成** | ✅ 内置 AI | ✅ AI 辅助 | ❌ 需插件 | ❌ 需插件 |
-| **项目需求管理** | ✅ 内置 | ❌ 不支持 | ❌ 不支持 | ❌ 不支持 |
-| **Web 端访问** | ✅ 浏览器即用 | ❌ 桌面应用 | ❌ 桌面应用 | ❌ 桌面应用 |
-| **开源免费** | ✅ 完全开源 | ❌ 部分功能付费 | ✅ 开源 | ❌ 商业软件 |
+| Feature | TAF-DataDev | Cursor | VS Code | DataGrip |
+|---------|-------------|--------|---------|----------|
+| **SQL-Specific Optimization** | ✅ Designed for SQL | ❌ General editor | ❌ General editor | ✅ Database IDE |
+| **Database Connection Management** | ✅ Built-in | ❌ Requires plugin | ❌ Requires plugin | ✅ Built-in |
+| **Table Structure Visualization** | ✅ One-click view | ❌ Requires plugin | ❌ Requires plugin | ✅ Supported |
+| **Temporary Table Creation** | ✅ File upload | ❌ Not supported | ❌ Not supported | ❌ Not supported |
+| **Metrics Library Management** | ✅ Built-in feature | ❌ Not supported | ❌ Not supported | ❌ Not supported |
+| **AI SQL Generation** | ✅ Built-in AI | ✅ AI assistance | ❌ Requires plugin | ❌ Requires plugin |
+| **Project Requirement Management** | ✅ Built-in | ❌ Not supported | ❌ Not supported | ❌ Not supported |
+| **Web Access** | ✅ Browser-ready | ❌ Desktop app | ❌ Desktop app | ❌ Desktop app |
+| **Open Source & Free** | ✅ Fully open source | ❌ Partially paid | ✅ Open source | ❌ Commercial |
 
-### 为什么选择 TAF-DataDev？
+### Why Choose TAF-DataDev?
 
-1. **零配置开箱即用**：无需安装插件，所有 SQL 开发功能内置
-2. **Web 端部署**：支持团队协作，无需本地安装
-3. **数据开发全流程**：从需求管理到 SQL 开发到指标管理，一站式解决
-4. **基于 Apache 顶级项目**：采用成熟稳定的技术栈，企业级可靠性
+1. **Zero Configuration, Ready to Use**: No plugin installation needed, all SQL development features are built-in
+2. **Web-Based Deployment**: Supports team collaboration without local installation
+3. **End-to-End Data Development**: One-stop solution from requirement management to SQL development to metrics management
+4. **Based on Apache Top-Level Projects**: Uses mature and stable technology stack with enterprise-grade reliability
 
-## 🏗️ 技术架构
+## 🏗️ Technical Architecture
 
-### 前端技术栈
+### Frontend Stack
 
-- **Next.js 16**：基于 React 的全栈框架，提供 SSR 和路由能力
-- **CodeMirror 6**：现代化的代码编辑器，提供强大的编辑体验
-- **TypeScript**：类型安全的 JavaScript，提升代码质量
-- **Tailwind CSS**：实用优先的 CSS 框架，快速构建 UI
+- **Next.js 16**: Full-stack React framework providing SSR and routing capabilities
+- **CodeMirror 6**: Modern code editor providing powerful editing experience
+- **TypeScript**: Type-safe JavaScript, improving code quality
+- **Tailwind CSS**: Utility-first CSS framework for rapid UI development
 
-### 后端技术栈
+### Backend Stack
 
-- **Flask**：轻量级 Python Web 框架，快速构建 API
-- **SQLAlchemy**：Python 最流行的 ORM，支持多种数据库
-- **LangChain**：AI 应用开发框架，支持多种 LLM 模型
-- **Flask-SQLAlchemy**：Flask 的 SQLAlchemy 扩展
+- **Flask**: Lightweight Python web framework for rapid API development
+- **SQLAlchemy**: Python's most popular ORM, supporting multiple databases
+- **LangChain**: AI application development framework supporting multiple LLM models
+- **Flask-SQLAlchemy**: SQLAlchemy extension for Flask
 
-### 数据库支持
+### Database Support
 
-- **MySQL**：通过 PyMySQL 驱动支持
-- **PostgreSQL**：通过 psycopg2 驱动支持
-- **SQLite**：内置支持，适合本地开发
+- **MySQL**: Supported via PyMySQL driver
+- **PostgreSQL**: Supported via psycopg2 driver
+- **SQLite**: Built-in support, suitable for local development
 
-## 📸 功能截图
+## 📸 Screenshots
 
-![功能截图](pic/功能截图.png)
+![Feature Screenshot](pic/功能截图.png)
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 环境要求
+### Requirements
 
 - Python 3.13+
 - Node.js 18+
-- npm 或 yarn
+- npm or yarn
 
-### 安装步骤
+### Installation Steps
 
-1. **克隆项目**
+1. **Clone the repository**
 
 ```bash
 git clone https://github.com/your-org/TAF-DataDev.git
 cd TAF-DataDev
 ```
 
-2. **启动后端服务**
+2. **Start the backend service**
 
 ```bash
 cd data-engine-api
-# 安装依赖（推荐使用 uv）
+# Install dependencies (recommended: use uv)
 uv sync
-# 或使用 pip
+# Or use pip
 pip install -r requirements.txt
 
-# 启动 Flask 服务
+# Start Flask service
 python main.py
 ```
 
-后端服务将在 `http://localhost:5000` 启动
+The backend service will start at `http://localhost:5000`
 
-3. **启动前端服务**
+3. **Start the frontend service**
 
 ```bash
 cd data-engine-web
@@ -134,91 +135,91 @@ npm install
 npm run dev
 ```
 
-前端服务将在 `http://localhost:3000` 启动
+The frontend service will start at `http://localhost:3000`
 
-4. **访问应用**
+4. **Access the application**
 
-打开浏览器访问 `http://localhost:3000`
+Open your browser and visit `http://localhost:3000`
 
-## 📚 使用指南
+## 📚 User Guide
 
-### 数据库连接
+### Database Connection
 
-1. 进入"数据库"页面
-2. 点击"添加数据库连接"
-3. 填写连接信息（MySQL/PostgreSQL/SQLite）
-4. 测试连接并保存
+1. Navigate to the "Database" page
+2. Click "Add Database Connection"
+3. Fill in connection information (MySQL/PostgreSQL/SQLite)
+4. Test connection and save
 
-### SQL 开发
+### SQL Development
 
-1. 进入"SQL 开发"页面
-2. 在右侧面板选择数据库连接
-3. 编写 SQL 语句
-4. 点击"运行"按钮执行查询
-5. 在底部面板查看运行结果
+1. Navigate to the "SQL Development" page
+2. Select database connection in the right panel
+3. Write SQL statements
+4. Click "Run" button to execute query
+5. View results in the bottom panel
 
-### 表结构查看
+### View Table Structure
 
-1. 在右侧"执行引擎"面板选择数据库
-2. 选择要查看的表
-3. 点击"查看表结构"按钮
-4. 在底部"表结构"标签页查看详细信息
+1. Select database in the right "Execution Engine" panel
+2. Select the table to view
+3. Click "View Table Structure" button
+4. View detailed information in the bottom "Table Structure" tab
 
-### 临时表创建
+### Create Temporary Table
 
-1. 在底部面板切换到"临时表创建"标签
-2. 点击上传按钮选择文件（Excel/JSON/CSV）
-3. 输入临时表名
-4. 点击"创建临时表"按钮
+1. Switch to "Temporary Table Creation" tab in the bottom panel
+2. Click upload button to select file (Excel/JSON/CSV)
+3. Enter temporary table name
+4. Click "Create Temporary Table" button
 
-## 🛠️ 开发
+## 🛠️ Development
 
-### 项目结构
+### Project Structure
 
 ```
 TAF-DataDev/
-├── data-engine-api/          # 后端 API 服务
-│   ├── api/                  # API 路由
-│   │   ├── database.py       # 数据库连接管理
-│   │   └── editor.py         # 编辑器相关 API
-│   ├── models/               # 数据模型
-│   └── main.py               # Flask 应用入口
-├── data-engine-web/          # 前端 Web 应用
-│   ├── app/                  # Next.js 页面
-│   ├── components/           # React 组件
+├── data-engine-api/          # Backend API service
+│   ├── api/                  # API routes
+│   │   ├── database.py       # Database connection management
+│   │   └── editor.py         # Editor-related API
+│   ├── models/               # Data models
+│   └── main.py               # Flask application entry
+├── data-engine-web/          # Frontend web application
+│   ├── app/                  # Next.js pages
+│   ├── components/           # React components
 │   ├── contexts/            # React Context
-│   └── lib/                 # 工具函数
-└── pic/                      # 项目截图
+│   └── lib/                 # Utility functions
+└── pic/                      # Project screenshots
 ```
 
-### 贡献指南
+### Contributing
 
-我们欢迎所有形式的贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详细信息。
+We welcome all forms of contributions! Please check [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
-## 📄 许可证
+## 📄 License
 
-本项目采用 [Apache License 2.0](LICENSE) 许可证。
+This project is licensed under the [Apache License 2.0](LICENSE).
 
-## 🙏 致谢
+## 🙏 Acknowledgments
 
-本项目使用了以下优秀的开源项目：
+This project uses the following excellent open-source projects:
 
-- [Next.js](https://nextjs.org/) - React 全栈框架
-- [Flask](https://flask.palletsprojects.com/) - Python Web 框架
-- [SQLAlchemy](https://www.sqlalchemy.org/) - Python SQL 工具包
-- [CodeMirror](https://codemirror.net/) - 代码编辑器
-- [LangChain](https://www.langchain.com/) - AI 应用开发框架
+- [Next.js](https://nextjs.org/) - React full-stack framework
+- [Flask](https://flask.palletsprojects.com/) - Python web framework
+- [SQLAlchemy](https://www.sqlalchemy.org/) - Python SQL toolkit
+- [CodeMirror](https://codemirror.net/) - Code editor
+- [LangChain](https://www.langchain.com/) - AI application development framework
 
-## 📞 联系我们
+## 📞 Contact Us
 
-- 项目 Issues: [GitHub Issues](https://github.com/your-org/TAF-DataDev/issues)
-- 项目讨论: [GitHub Discussions](https://github.com/your-org/TAF-DataDev/discussions)
+- Project Issues: [GitHub Issues](https://github.com/your-org/TAF-DataDev/issues)
+- Project Discussions: [GitHub Discussions](https://github.com/your-org/TAF-DataDev/discussions)
 
 ---
 
 <div align="center">
 
-**⭐ 如果这个项目对你有帮助，请给我们一个 Star！**
+**⭐ If this project helps you, please give us a Star!**
 
 Made with ❤️ by TAF Team
 

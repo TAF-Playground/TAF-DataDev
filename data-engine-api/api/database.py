@@ -819,42 +819,106 @@ def execute_sql(connection_id):
         
         # Execute query
         with engine.connect() as conn:
-            # For SELECT queries, fetch results
+            # Determine if query returns a result set
             sql_upper = sql_query.upper().strip()
-            is_select = sql_upper.startswith('SELECT') or sql_upper.startswith('WITH')
+            # Queries that return result sets
+            returns_result_set = (
+                sql_upper.startswith('SELECT') or 
+                sql_upper.startswith('WITH') or
+                sql_upper.startswith('SHOW') or  # SHOW TABLES, SHOW DATABASES, etc.
+                sql_upper.startswith('DESCRIBE') or
+                sql_upper.startswith('DESC') or
+                sql_upper.startswith('EXPLAIN') or
+                sql_upper.startswith('PRAGMA')  # SQLite pragma statements
+            )
             
-            if is_select:
+            if returns_result_set:
+                # For queries that return result sets (SELECT, SHOW, DESCRIBE, etc.)
                 result = conn.execute(text(sql_query))
-                rows = result.fetchall()
-                columns = list(result.keys()) if hasattr(result, 'keys') else []
                 
-                # Convert rows to list of lists
-                rows_data = []
-                for row in rows:
-                    row_list = []
-                    for col in columns:
-                        value = getattr(row, col, None)
-                        # Convert non-serializable types to string
-                        if value is None:
-                            row_list.append(None)
-                        elif isinstance(value, (int, float, str, bool)):
-                            row_list.append(value)
+                # Try to fetch results
+                try:
+                    rows = result.fetchall()
+                    # Get column names from result
+                    if hasattr(result, 'keys'):
+                        columns = list(result.keys())
+                    elif hasattr(result, 'columns'):
+                        columns = [col.name for col in result.columns]
+                    else:
+                        # Fallback: try to get columns from first row
+                        columns = []
+                        if rows:
+                            if hasattr(rows[0], '_fields'):
+                                columns = list(rows[0]._fields)
+                            elif hasattr(rows[0], '_asdict'):
+                                columns = list(rows[0]._asdict().keys())
+                            elif isinstance(rows[0], (list, tuple)):
+                                # For tuple/list rows, use generic column names
+                                columns = [f'column_{i+1}' for i in range(len(rows[0]))]
+                    
+                    # Convert rows to list of lists
+                    rows_data = []
+                    for row in rows:
+                        row_list = []
+                        if hasattr(row, '_asdict'):
+                            # Row is a Row object
+                            row_dict = row._asdict()
+                            for col in columns:
+                                value = row_dict.get(col, None)
+                                if value is None:
+                                    row_list.append(None)
+                                elif isinstance(value, (int, float, str, bool)):
+                                    row_list.append(value)
+                                else:
+                                    row_list.append(str(value))
+                        elif isinstance(row, (list, tuple)):
+                            # Row is a list/tuple
+                            for value in row:
+                                if value is None:
+                                    row_list.append(None)
+                                elif isinstance(value, (int, float, str, bool)):
+                                    row_list.append(value)
+                                else:
+                                    row_list.append(str(value))
                         else:
-                            row_list.append(str(value))
-                    rows_data.append(row_list)
-                
-                execution_time = time.time() - start_time
-                
-                return jsonify({
-                    'success': True,
-                    'columns': columns,
-                    'rows': rows_data,
-                    'rowCount': len(rows_data),
-                    'executionTime': round(execution_time, 3),
-                    'message': f'查询成功，返回 {len(rows_data)} 行'
-                }), 200
+                            # Try to access by column name
+                            for col in columns:
+                                value = getattr(row, col, None)
+                                if value is None:
+                                    row_list.append(None)
+                                elif isinstance(value, (int, float, str, bool)):
+                                    row_list.append(value)
+                                else:
+                                    row_list.append(str(value))
+                        rows_data.append(row_list)
+                    
+                    execution_time = time.time() - start_time
+                    
+                    return jsonify({
+                        'success': True,
+                        'columns': columns,
+                        'rows': rows_data,
+                        'rowCount': len(rows_data),
+                        'executionTime': round(execution_time, 3),
+                        'message': f'查询成功，返回 {len(rows_data)} 行'
+                    }), 200
+                except Exception as fetch_error:
+                    # If fetch fails, it might be a DDL/DML statement that was misclassified
+                    # Try to commit and return rowcount
+                    conn.commit()
+                    execution_time = time.time() - start_time
+                    affected_rows = result.rowcount if hasattr(result, 'rowcount') else 0
+                    
+                    return jsonify({
+                        'success': True,
+                        'columns': [],
+                        'rows': [],
+                        'rowCount': affected_rows,
+                        'executionTime': round(execution_time, 3),
+                        'message': f'执行成功，影响 {affected_rows} 行'
+                    }), 200
             else:
-                # For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
+                # For non-SELECT queries (INSERT, UPDATE, DELETE, CREATE, ALTER, etc.)
                 result = conn.execute(text(sql_query))
                 conn.commit()
                 
@@ -884,4 +948,258 @@ def execute_sql(connection_id):
             'error': f'执行失败: {error_msg}',
             'message': f'执行失败: {error_msg}'
         }), 200
+
+
+@database_bp.route('/connections/<connection_id>/databases', methods=['GET'])
+def get_databases(connection_id):
+    """
+    Get list of databases for a connection
+    """
+    try:
+        connection = DatabaseConnection.query.get(connection_id)
+        if not connection:
+            return jsonify({'error': '数据库连接不存在'}), 404
+        
+        try:
+            conn_str = build_connection_string(
+                db_type=connection.db_type,
+                host=connection.host,
+                port=connection.port,
+                database=connection.database,
+                username=connection.username,
+                password=connection.password,
+                connection_string=connection.connection_string
+            )
+        except Exception as e:
+            return jsonify({'error': f'连接字符串构建失败: {str(e)}'}), 400
+        
+        try:
+            engine = create_engine(
+                conn_str,
+                connect_args={'connect_timeout': 10} if connection.db_type != 'sqlite' else {},
+                pool_pre_ping=True,
+                echo=False
+            )
+        except Exception as e:
+            return jsonify({'error': f'无法创建数据库引擎: {str(e)}'}), 500
+        
+        with engine.connect() as conn:
+            if connection.db_type == 'mysql':
+                result = conn.execute(text('SHOW DATABASES'))
+                databases = [row[0] for row in result.fetchall()]
+            elif connection.db_type == 'postgresql':
+                result = conn.execute(text("SELECT datname FROM pg_database WHERE datistemplate = false"))
+                databases = [row[0] for row in result.fetchall()]
+            elif connection.db_type == 'sqlite':
+                # SQLite doesn't have multiple databases, return the current database name
+                databases = [connection.database or 'main']
+            else:
+                return jsonify({'error': f'不支持的数据库类型: {connection.db_type}'}), 400
+            
+            return jsonify({'databases': databases}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'获取数据库列表失败: {str(e)}'}), 500
+
+
+@database_bp.route('/connections/<connection_id>/tables', methods=['GET'])
+def get_tables(connection_id):
+    """
+    Get list of tables for a database
+    """
+    try:
+        connection = DatabaseConnection.query.get(connection_id)
+        if not connection:
+            return jsonify({'error': '数据库连接不存在'}), 404
+        
+        database = request.args.get('database', connection.database)
+        schema = request.args.get('schema', None)
+        
+        try:
+            conn_str = build_connection_string(
+                db_type=connection.db_type,
+                host=connection.host,
+                port=connection.port,
+                database=database,
+                username=connection.username,
+                password=connection.password,
+                connection_string=connection.connection_string
+            )
+        except Exception as e:
+            return jsonify({'error': f'连接字符串构建失败: {str(e)}'}), 400
+        
+        try:
+            engine = create_engine(
+                conn_str,
+                connect_args={'connect_timeout': 10} if connection.db_type != 'sqlite' else {},
+                pool_pre_ping=True,
+                echo=False
+            )
+        except Exception as e:
+            return jsonify({'error': f'无法创建数据库引擎: {str(e)}'}), 500
+        
+        with engine.connect() as conn:
+            if connection.db_type == 'mysql':
+                if database:
+                    conn.execute(text(f'USE `{database}`'))
+                result = conn.execute(text('SHOW TABLES'))
+                tables = [row[0] for row in result.fetchall()]
+            elif connection.db_type == 'postgresql':
+                if schema:
+                    query = text("""
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_schema = :schema 
+                        AND table_type = 'BASE TABLE'
+                        ORDER BY table_name
+                    """)
+                    result = conn.execute(query, {'schema': schema})
+                else:
+                    query = text("""
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_type = 'BASE TABLE'
+                        ORDER BY table_name
+                    """)
+                    result = conn.execute(query)
+                tables = [row[0] for row in result.fetchall()]
+            elif connection.db_type == 'sqlite':
+                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"))
+                tables = [row[0] for row in result.fetchall()]
+            else:
+                return jsonify({'error': f'不支持的数据库类型: {connection.db_type}'}), 400
+            
+            return jsonify({'tables': tables}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'获取表列表失败: {str(e)}'}), 500
+
+
+@database_bp.route('/connections/<connection_id>/table-structure', methods=['GET'])
+def get_table_structure(connection_id):
+    """
+    Get table structure (columns, types, comments)
+    """
+    try:
+        connection = DatabaseConnection.query.get(connection_id)
+        if not connection:
+            return jsonify({'error': '数据库连接不存在'}), 404
+        
+        database = request.args.get('database', connection.database)
+        schema = request.args.get('schema', None)
+        table = request.args.get('table')
+        
+        if not table:
+            return jsonify({'error': '表名不能为空'}), 400
+        
+        try:
+            conn_str = build_connection_string(
+                db_type=connection.db_type,
+                host=connection.host,
+                port=connection.port,
+                database=database,
+                username=connection.username,
+                password=connection.password,
+                connection_string=connection.connection_string
+            )
+        except Exception as e:
+            return jsonify({'error': f'连接字符串构建失败: {str(e)}'}), 400
+        
+        try:
+            engine = create_engine(
+                conn_str,
+                connect_args={'connect_timeout': 10} if connection.db_type != 'sqlite' else {},
+                pool_pre_ping=True,
+                echo=False
+            )
+        except Exception as e:
+            return jsonify({'error': f'无法创建数据库引擎: {str(e)}'}), 500
+        
+        with engine.connect() as conn:
+            columns = []
+            
+            if connection.db_type == 'mysql':
+                if database:
+                    conn.execute(text(f'USE `{database}`'))
+                query = text(f"""
+                    SELECT 
+                        COLUMN_NAME as column_name,
+                        DATA_TYPE as data_type,
+                        COLUMN_TYPE as column_type,
+                        IS_NULLABLE as is_nullable,
+                        COLUMN_DEFAULT as column_default,
+                        COLUMN_COMMENT as column_comment,
+                        COLUMN_KEY as column_key,
+                        EXTRA as extra
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = :database
+                    AND TABLE_NAME = :table
+                    ORDER BY ORDINAL_POSITION
+                """)
+                result = conn.execute(query, {'database': database or connection.database, 'table': table})
+                for row in result.fetchall():
+                    columns.append({
+                        'field': row[0],
+                        'type': row[2] or row[1],  # Use COLUMN_TYPE if available, else DATA_TYPE
+                        'nullable': row[3] == 'YES',
+                        'default': row[4],
+                        'comment': row[5] or '',
+                        'key': row[6] or '',
+                        'extra': row[7] or ''
+                    })
+            elif connection.db_type == 'postgresql':
+                schema_name = schema or 'public'
+                query = text("""
+                    SELECT 
+                        column_name,
+                        data_type,
+                        udt_name,
+                        is_nullable,
+                        column_default,
+                        COALESCE(col_description(c.oid, a.attnum), '') as column_comment
+                    FROM information_schema.columns c
+                    LEFT JOIN pg_class cls ON cls.relname = c.table_name
+                    LEFT JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace AND nsp.nspname = c.table_schema
+                    LEFT JOIN pg_attribute a ON a.attrelid = cls.oid AND a.attname = c.column_name
+                    WHERE table_schema = :schema
+                    AND table_name = :table
+                    ORDER BY ordinal_position
+                """)
+                result = conn.execute(query, {'schema': schema_name, 'table': table})
+                for row in result.fetchall():
+                    columns.append({
+                        'field': row[0],
+                        'type': row[2] or row[1],  # Use udt_name if available, else data_type
+                        'nullable': row[3] == 'YES',
+                        'default': row[4],
+                        'comment': row[5] or '',
+                        'key': '',
+                        'extra': ''
+                    })
+            elif connection.db_type == 'sqlite':
+                # SQLite doesn't have a standard way to get column comments
+                result = conn.execute(text(f"PRAGMA table_info(`{table}`)"))
+                for row in result.fetchall():
+                    columns.append({
+                        'field': row[1],
+                        'type': row[2] or '',
+                        'nullable': not row[3],  # notnull is 0 for nullable
+                        'default': row[4],
+                        'comment': '',  # SQLite doesn't support comments
+                        'key': 'PRI' if row[5] else '',
+                        'extra': ''
+                    })
+            else:
+                return jsonify({'error': f'不支持的数据库类型: {connection.db_type}'}), 400
+            
+            return jsonify({
+                'database': database or connection.database,
+                'schema': schema,
+                'table': table,
+                'columns': columns
+            }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'获取表结构失败: {str(e)}'}), 500
 

@@ -3,7 +3,7 @@
 import { useEditor } from '@/hooks/useEditor';
 import { useDatabase } from '@/contexts/DatabaseContext';
 import { useQueryResult } from '@/contexts/QueryResultContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -19,6 +19,25 @@ export function CodeEditor() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [projectName, setProjectName] = useState<string>('');
+  
+  // 使用本地状态来管理编辑器内容，避免每次输入都触发 Context 更新
+  const [localContent, setLocalContent] = useState<string>(codeContent);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previousSelectedFileRef = useRef<string>(selectedFile);
+
+  // 当切换文件时，同步 Context 中的内容到本地状态
+  useEffect(() => {
+    // 只在文件切换时同步，避免用户输入时被覆盖
+    if (previousSelectedFileRef.current !== selectedFile) {
+      setLocalContent(codeContent);
+      previousSelectedFileRef.current = selectedFile;
+      // 清除之前的防抖定时器
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    }
+  }, [selectedFile, codeContent]);
 
   useEffect(() => {
     const loadProjectName = async () => {
@@ -43,28 +62,42 @@ export function CodeEditor() {
     loadProjectName();
   }, [selectedFile]);
 
-  const handleEditorChange = (value: string) => {
-    setCodeContent(value);
-  };
+  // 防抖更新 Context，避免频繁更新导致性能问题
+  const debouncedUpdateContext = useCallback((value: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setCodeContent(value);
+    }, 300); // 300ms 防抖延迟
+  }, [setCodeContent]);
 
-  const handleRun = async () => {
+  const handleEditorChange = useCallback((value: string) => {
+    // 立即更新本地状态，保证输入流畅
+    setLocalContent(value);
+    // 防抖更新 Context
+    debouncedUpdateContext(value);
+  }, [debouncedUpdateContext]);
+
+  const handleRun = useCallback(async () => {
     if (!selectedDatabase) {
       alert('请先在右侧面板选择数据库');
       return;
     }
 
-    if (!codeContent.trim()) {
+    // 使用本地内容，确保是最新的
+    const contentToRun = localContent.trim();
+    if (!contentToRun) {
       alert('SQL 查询不能为空');
       return;
     }
 
     try {
       setIsRunning(true);
-      const result = await executeSQL(selectedDatabase.id, codeContent);
+      // 先同步到 Context，确保保存时能获取最新内容
+      setCodeContent(localContent);
+      const result = await executeSQL(selectedDatabase.id, localContent);
       setQueryResult(result);
-      
-      // 自动切换到 Query results tab (通过设置 activeTab)
-      // 这个需要在 BottomPanel 中处理
     } catch (error) {
       console.error('Failed to execute SQL:', error);
       setQueryResult({
@@ -75,15 +108,16 @@ export function CodeEditor() {
     } finally {
       setIsRunning(false);
     }
-  };
+  }, [selectedDatabase, localContent, setCodeContent, setQueryResult]);
 
-  const handleFormat = () => {
+  const handleFormat = useCallback(() => {
     try {
-      if (!codeContent.trim()) {
+      const contentToFormat = localContent.trim();
+      if (!contentToFormat) {
         return;
       }
       // 格式化 SQL
-      const formatted = format(codeContent, {
+      const formatted = format(localContent, {
         language: 'sql',
         tabWidth: 2,
         useTabs: false,
@@ -91,14 +125,15 @@ export function CodeEditor() {
         indentStyle: 'standard',
         linesBetweenQueries: 2,
       });
+      setLocalContent(formatted);
       setCodeContent(formatted);
     } catch (error) {
       console.error('SQL 格式化失败:', error);
       // 如果格式化失败，保持原样
     }
-  };
+  }, [localContent, setCodeContent]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selectedFile || selectedFile === DEFAULT_FILE_PATH) {
       alert('请先选择一个项目');
       return;
@@ -106,7 +141,9 @@ export function CodeEditor() {
 
     try {
       setIsSaving(true);
-      await saveProjectSQL(selectedFile, codeContent);
+      // 先同步到 Context，确保保存最新内容
+      setCodeContent(localContent);
+      await saveProjectSQL(selectedFile, localContent);
       alert('SQL保存成功');
     } catch (error) {
       console.error('Failed to save SQL:', error);
@@ -114,7 +151,19 @@ export function CodeEditor() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [selectedFile, localContent, setCodeContent]);
+
+  // 清理防抖定时器
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 优化 CodeMirror 配置，使用 useMemo 避免重复创建
+  const extensions = useMemo(() => [sql()], []);
 
   return (
     <div className="flex flex-col h-full bg-gray-950">
@@ -201,10 +250,10 @@ export function CodeEditor() {
       {/* Code editor with CodeMirror */}
       <div className="flex-1 overflow-hidden">
         <CodeMirror
-          value={codeContent}
+          value={localContent}
           height="100%"
           theme={oneDark}
-          extensions={[sql()]}
+          extensions={extensions}
           onChange={handleEditorChange}
           basicSetup={{
             lineNumbers: true,

@@ -167,3 +167,93 @@ export function executeSQL(
     });
 }
 
+
+// 获取数据库列表
+export function getDatabases(connectionId: string): Promise<string[]> {
+  return fetch(`${API_BASE_URL}/database/connections/${connectionId}/databases`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => data.databases || [])
+    .catch(error => {
+      console.error('Failed to fetch databases:', error);
+      throw error;
+    });
+}
+
+// 获取表列表
+export function getTables(
+  connectionId: string,
+  database?: string,
+  schema?: string
+): Promise<string[]> {
+  const params = new URLSearchParams();
+  if (database) params.append('database', database);
+  if (schema) params.append('schema', schema);
+  
+  return fetch(`${API_BASE_URL}/database/connections/${connectionId}/tables?${params.toString()}`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => data.tables || [])
+    .catch(error => {
+      console.error('Failed to fetch tables:', error);
+      throw error;
+    });
+}
+
+// 表结构列信息
+export interface TableColumn {
+  field: string;
+  type: string;
+  nullable: boolean;
+  default: string | null;
+  comment: string;
+  key: string;
+  extra: string;
+}
+
+// 表结构信息
+export interface TableStructure {
+  database: string;
+  schema?: string;
+  table: string;
+  columns: TableColumn[];
+}
+
+// 获取表结构
+export function getTableStructure(
+  connectionId: string,
+  table: string,
+  database?: string,
+  schema?: string
+): Promise<TableStructure> {
+  const params = new URLSearchParams();
+  params.append('table', table);
+  if (database) params.append('database', database);
+  if (schema) params.append('schema', schema);
+  
+  return fetch(`${API_BASE_URL}/database/connections/${connectionId}/table-structure?${params.toString()}`)
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(err => {
+          throw new Error(err.error || `HTTP error! status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .catch(error => {
+      console.error('Failed to fetch table structure:', error);
+      throw error;
+    });
+}

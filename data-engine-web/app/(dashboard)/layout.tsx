@@ -2,6 +2,7 @@ import { EditorProvider } from '@/contexts/EditorContext';
 import { MetricsProvider } from '@/contexts/MetricsContext';
 import { DatabaseProvider } from '@/contexts/DatabaseContext';
 import { QueryResultProvider } from '@/contexts/QueryResultContext';
+import { TableStructureProvider } from '@/contexts/TableStructureContext';
 
 export default function DashboardLayout({
   children,
@@ -13,7 +14,9 @@ export default function DashboardLayout({
       <MetricsProvider>
         <DatabaseProvider>
           <QueryResultProvider>
-            {children}
+            <TableStructureProvider>
+              {children}
+            </TableStructureProvider>
           </QueryResultProvider>
         </DatabaseProvider>
       </MetricsProvider>

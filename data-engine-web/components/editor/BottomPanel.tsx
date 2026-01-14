@@ -1,12 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryResult } from '@/contexts/QueryResultContext';
-import { SchemaData, SchemaField } from '@/types';
+import { useTableStructure } from '@/contexts/TableStructureContext';
 
 export function BottomPanel() {
   const { queryResult } = useQueryResult();
-  const [activeTab, setActiveTab] = useState<'query-results' | 'schemas' | 'case-search' | 'ai-prompt'>('schemas');
+  const { tableStructure } = useTableStructure();
+  const [activeTab, setActiveTab] = useState<'query-results' | 'table-structure' | 'case-search' | 'metric-search' | 'ai-solution-generation' | 'ai-metric-extraction' | 'temp-table-creation'>('query-results');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 处理文件选择
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // 检查文件类型
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const allowedExtensions = ['xlsx', 'xls', 'json', 'csv'];
+      
+      if (fileExtension && allowedExtensions.includes(fileExtension)) {
+        setUploadedFile(file);
+      } else {
+        alert('不支持的文件类型。请上传 Excel (.xlsx, .xls)、JSON (.json) 或 CSV (.csv) 文件。');
+        // 清空文件选择
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    }
+  };
+
+  // 触发文件选择
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  // 格式化文件大小
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
 
   // 当有查询结果时，自动切换到 Query results tab
   useEffect(() => {
@@ -14,47 +51,13 @@ export function BottomPanel() {
       setActiveTab('query-results');
     }
   }, [queryResult]);
-  const [expandedSchemas, setExpandedSchemas] = useState<Set<string>>(
-    new Set(['datafrom_demo'])
-  );
-  const [visibleSchemas, setVisibleSchemas] = useState<Set<string>>(
-    new Set(['dataform_demo.dataset_1'])
-  );
 
-  const toggleSchema = (schema: string) => {
-    const newExpanded = new Set(expandedSchemas);
-    if (newExpanded.has(schema)) {
-      newExpanded.delete(schema);
-    } else {
-      newExpanded.add(schema);
+  // 当有表结构时，自动切换到表结构 tab
+  useEffect(() => {
+    if (tableStructure) {
+      setActiveTab('table-structure');
     }
-    setExpandedSchemas(newExpanded);
-  };
-
-  const schemaData: SchemaData[] = [
-    {
-      schema: 'datafrom_demo',
-      datasets: [
-        'dataset_1',
-        'dataset_5_from_script_builder',
-        'dataset_3_incremental_date',
-        'dataset_4_incremental_snapshot',
-        'reporting_gb',
-      ],
-    },
-    {
-      schema: 'datafrom_set2',
-      datasets: [],
-    },
-  ];
-
-  const schemaFields: SchemaField[] = [
-    { field: 'date', type: 'date' },
-    { field: 'device_type', type: 'character varying' },
-    { field: 'country', type: 'character varying' },
-    { field: 'sessions', type: 'integer' },
-    { field: 'revenue', type: 'integer' },
-  ];
+  }, [tableStructure]);
 
   return (
     <div className="flex flex-col h-full w-full bg-gray-800 border-t border-gray-600">
@@ -68,17 +71,17 @@ export function BottomPanel() {
               : 'text-gray-400 hover:text-gray-300'
           }`}
         >
-          Query results
+          运行结果
         </button>
         <button
-          onClick={() => setActiveTab('schemas')}
+          onClick={() => setActiveTab('table-structure')}
           className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'schemas'
+            activeTab === 'table-structure'
               ? 'text-white border-b-2 border-blue-500'
               : 'text-gray-400 hover:text-gray-300'
           }`}
         >
-          Schemas
+          表结构
         </button>
         <button
           onClick={() => setActiveTab('case-search')}
@@ -91,14 +94,44 @@ export function BottomPanel() {
           案例搜索
         </button>
         <button
-          onClick={() => setActiveTab('ai-prompt')}
+          onClick={() => setActiveTab('metric-search')}
           className={`px-4 py-2 text-sm font-medium ${
-            activeTab === 'ai-prompt'
+            activeTab === 'metric-search'
               ? 'text-white border-b-2 border-blue-500'
               : 'text-gray-400 hover:text-gray-300'
           }`}
         >
-          AI 提示
+          指标搜索
+        </button>
+        <button
+          onClick={() => setActiveTab('ai-solution-generation')}
+          className={`px-4 py-2 text-sm font-medium ${
+            activeTab === 'ai-solution-generation'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          AI方案生成
+        </button>
+        <button
+          onClick={() => setActiveTab('ai-metric-extraction')}
+          className={`px-4 py-2 text-sm font-medium ${
+            activeTab === 'ai-metric-extraction'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          AI指标提取
+        </button>
+        <button
+          onClick={() => setActiveTab('temp-table-creation')}
+          className={`px-4 py-2 text-sm font-medium ${
+            activeTab === 'temp-table-creation'
+              ? 'text-white border-b-2 border-blue-500'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          临时表创建
         </button>
       </div>
 
@@ -108,31 +141,31 @@ export function BottomPanel() {
           <div className="flex-1 overflow-auto p-4">
             {!queryResult ? (
               <div className="text-sm text-gray-400">
-                <p>查询结果将显示在这里...</p>
-                <p className="text-xs mt-2">请在 SQL 编辑器中编写 SQL 并点击运行按钮</p>
+                <p>SQL 运行结果将显示在这里...</p>
+                <p className="text-xs mt-2">请在 SQL 编辑器中编写 SQL 语句（SELECT、SHOW、CREATE、INSERT、UPDATE、DELETE 等）并点击运行按钮</p>
               </div>
             ) : queryResult.success ? (
               <div className="space-y-4">
-                {/* 查询信息 */}
+                {/* 执行信息 */}
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-4">
                     <span className="text-green-400">
-                      ✓ {queryResult.message || '查询成功'}
+                      ✓ {queryResult.message || '执行成功'}
                     </span>
                     {queryResult.rowCount !== undefined && (
                       <span className="text-gray-400">
-                        返回 {queryResult.rowCount} 行
+                        {queryResult.rowCount > 0 ? `返回 ${queryResult.rowCount} 行` : '无数据返回'}
                       </span>
                     )}
                     {queryResult.executionTime !== undefined && (
                       <span className="text-gray-400">
-                        执行时间: {queryResult.executionTime} 秒
+                        执行时间: {queryResult.executionTime.toFixed(3)} 秒
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* 查询结果表格 */}
+                {/* 结果表格 - 适用于 SELECT、SHOW TABLES 等返回数据的语句 */}
                 {queryResult.columns && queryResult.columns.length > 0 && queryResult.rows ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm border-collapse">
@@ -183,9 +216,12 @@ export function BottomPanel() {
                     </table>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-400">
-                    {queryResult.message || '执行成功，但没有返回数据'}
-                  </div>
+                  // 对于 DDL 语句（CREATE TABLE、ALTER TABLE 等）和 DML 语句（INSERT、UPDATE、DELETE），只显示消息
+                  queryResult.message && (
+                    <div className="text-sm text-gray-300 bg-gray-700 rounded p-3">
+                      {queryResult.message}
+                    </div>
+                  )
                 )}
               </div>
             ) : (
@@ -203,105 +239,105 @@ export function BottomPanel() {
           </div>
         )}
 
-        {activeTab === 'schemas' && (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Schema tree */}
-            <div className="w-64 border-r border-gray-600 overflow-y-auto p-4 bg-gray-850">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-300">Schemas</h3>
-                <button className="text-gray-400 hover:text-gray-300">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
+        {activeTab === 'table-structure' && (
+          <div className="flex-1 overflow-auto p-4">
+            {!tableStructure ? (
+              <div className="text-sm text-gray-400">
+                <p>表结构将显示在这里...</p>
+                <p className="text-xs mt-2">请在右侧数据库面板中选择数据库和表，然后点击"查看表结构"按钮</p>
               </div>
-
-              <div className="space-y-1">
-                {schemaData.map((item) => (
-                  <div key={item.schema}>
-                    <button
-                      onClick={() => toggleSchema(item.schema)}
-                      className="flex items-center gap-2 w-full text-left text-sm text-gray-300 hover:text-white py-1"
-                    >
-                      <svg
-                        className={`w-3 h-3 transition-transform ${
-                          expandedSchemas.has(item.schema) ? 'rotate-90' : ''
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span>{item.schema}</span>
-                    </button>
-                    {expandedSchemas.has(item.schema) && (
-                      <div className="ml-4 space-y-1">
-                        {item.datasets.map((dataset) => (
-                          <div
-                            key={dataset}
-                            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 py-0.5"
-                          >
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                            </svg>
-                            <span>{dataset}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+            ) : (
+              <div className="space-y-4">
+                {/* 表信息 */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-300 font-medium">
+                      {tableStructure.database}
+                      {tableStructure.schema && `.${tableStructure.schema}`}
+                      {`.${tableStructure.table}`}
+                    </span>
+                    <span className="text-gray-400">
+                      {tableStructure.columns.length} 个字段
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Schema details */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {visibleSchemas.has('dataform_demo.dataset_1') && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-300">dataform_demo.dataset_1</span>
-                      <span className="text-xs px-1.5 py-0.5 bg-gray-600 text-gray-300 rounded">
-                        view
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const newVisible = new Set(visibleSchemas);
-                        newVisible.delete('dataform_demo.dataset_1');
-                        setVisibleSchemas(newVisible);
-                      }}
-                      className="text-gray-400 hover:text-gray-300"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-
+                {/* 表结构表格 */}
+                {tableStructure.columns.length > 0 && (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm border-collapse">
                       <thead>
-                        <tr className="border-b border-gray-600">
-                          <th className="text-left py-2 px-3 text-gray-400 font-medium">Field</th>
-                          <th className="text-left py-2 px-3 text-gray-400 font-medium">Type</th>
+                        <tr className="border-b border-gray-600 bg-gray-700">
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            字段名
+                          </th>
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            类型
+                          </th>
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            可空
+                          </th>
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            默认值
+                          </th>
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            键
+                          </th>
+                          <th className="text-left py-2 px-3 text-gray-300 font-medium sticky top-0 bg-gray-700">
+                            备注
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {schemaFields.map((field, index) => (
-                          <tr key={index} className="border-b border-gray-700">
-                            <td className="py-2 px-3 text-gray-300">{field.field}</td>
-                            <td className="py-2 px-3 text-gray-400">{field.type}</td>
+                        {tableStructure.columns.map((column, index) => (
+                          <tr
+                            key={index}
+                            className="border-b border-gray-700 hover:bg-gray-750"
+                          >
+                            <td className="py-2 px-3 text-gray-300 font-medium">
+                              {column.field}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400">
+                              {column.type}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400">
+                              {column.nullable ? (
+                                <span className="text-yellow-400">是</span>
+                              ) : (
+                                <span className="text-red-400">否</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400">
+                              {column.default !== null && column.default !== undefined ? (
+                                <span className="text-gray-300">{String(column.default)}</span>
+                              ) : (
+                                <span className="text-gray-500 italic">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400">
+                              {column.key ? (
+                                <span className="px-2 py-0.5 bg-blue-600 text-blue-100 rounded text-xs">
+                                  {column.key}
+                                </span>
+                              ) : (
+                                <span className="text-gray-500">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-gray-400">
+                              {column.comment ? (
+                                <span className="text-gray-300">{column.comment}</span>
+                              ) : (
+                                <span className="text-gray-500 italic">-</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -321,18 +357,188 @@ export function BottomPanel() {
           </div>
         )}
 
-        {activeTab === 'ai-prompt' && (
+        {activeTab === 'metric-search' && (
+          <div className="flex-1 p-4 text-sm text-gray-400">
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="搜索指标..."
+                className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div className="text-gray-400">
+              {/* TODO: 指标搜索结果列表 */}
+              <p>指标搜索结果将显示在这里...</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'ai-solution-generation' && (
           <div className="flex-1 p-4 text-sm text-gray-400">
             <div className="mb-4">
               <textarea
-                placeholder="输入您的需求，AI 将为您提供提示..."
+                placeholder="输入您的需求，AI 将为您生成解决方案..."
                 className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 resize-none"
                 rows={4}
               />
             </div>
             <div className="text-gray-400">
-              {/* TODO: AI 提示结果 */}
-              <p>AI 提示结果将显示在这里...</p>
+              {/* TODO: AI 方案生成结果 */}
+              <p>AI 方案生成结果将显示在这里...</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'ai-metric-extraction' && (
+          <div className="flex-1 p-4 text-sm text-gray-400">
+            <div className="mb-4">
+              <textarea
+                placeholder="输入您的需求或SQL语句，AI 将为您提取指标..."
+                className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 resize-none"
+                rows={4}
+              />
+            </div>
+            <div className="text-gray-400">
+              {/* TODO: AI 指标提取结果 */}
+              <p>AI 指标提取结果将显示在这里...</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'temp-table-creation' && (
+          <div className="flex-1 p-4 text-sm text-gray-400">
+            <div className="space-y-4">
+              {/* 文件上传区域 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  上传文件
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.json,.csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={handleUploadClick}
+                  className="w-full px-4 py-3 bg-gray-700 border-2 border-dashed border-gray-600 rounded hover:border-blue-500 hover:bg-gray-750 transition-colors flex items-center justify-center gap-2 text-gray-300"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                  <span>点击上传文件（支持 Excel、JSON、CSV）</span>
+                </button>
+                <p className="text-xs text-gray-500 mt-2">
+                  支持的文件格式：.xlsx, .xls, .json, .csv
+                </p>
+              </div>
+
+              {/* 已上传文件信息 */}
+              {uploadedFile && (
+                <div className="p-4 bg-gray-700 rounded border border-gray-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <span className="text-gray-300 font-medium">{uploadedFile.name}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setUploadedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                      className="text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <div>文件大小: {formatFileSize(uploadedFile.size)}</div>
+                    <div>文件类型: {uploadedFile.type || uploadedFile.name.split('.').pop()?.toUpperCase()}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* 表名输入 */}
+              {uploadedFile && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    临时表名
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="请输入临时表名..."
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              {/* 创建按钮 */}
+              {uploadedFile && (
+                <button
+                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  创建临时表
+                </button>
+              )}
+
+              {/* 提示信息 */}
+              {!uploadedFile && (
+                <div className="text-xs text-gray-500 mt-4">
+                  <p>• 上传 Excel、JSON 或 CSV 文件后，系统将自动解析文件内容</p>
+                  <p className="mt-1">• 您可以为临时表指定一个名称</p>
+                  <p className="mt-1">• 创建后，临时表将可以在 SQL 查询中使用</p>
+                </div>
+              )}
             </div>
           </div>
         )}
